@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Pytest
+.pytest_cache/
+
+# Environments
+venv/
+env/
+.env
+
+# Models
+*.task
+
+# Video files
+*.mp4
+*.mov
+*.avi
+
+# Image files (Ignore by default, but allow keyframes for README)
+*.png
+!keyframe_*.png
