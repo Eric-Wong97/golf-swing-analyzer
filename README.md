@@ -18,6 +18,10 @@ Here are some sample pose estimation frames extracted from the analyzer at diffe
 | :---------------------------: | :---------------------------: | :---------------------------: |
 | ![Keyframe 1](keyframe_1.png) | ![Keyframe 2](keyframe_2.png) | ![Keyframe 3](keyframe_3.png) |
 
+## Limitations
+- **Right-Handed Bias**: The current logic calculates angles based on the left shoulder, elbow, and knee. This makes it a perfect lead-side analyzer for right-handed golfers, but it currently tracks the trailing side for left-handed golfers.
+- **Body Tracking Only**: Google's MediaPipe is highly optimized for tracking the human body. As a result, this script does not currently track the golf club shaft, the clubface angle, or the golf ball itself.
+
 ## Prerequisites
 - Python 3.10+
 - Visual Studio build tools (required for OpenCV on some Windows setups)
