@@ -1,207 +1,126 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta
-      name="description"
-      content="Golf Swing Analyzer — client-side AI posture analysis using Google MediaPipe. 100% private: all processing runs in your browser."
-    />
-    <title>Golf Swing Analyzer</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap"
-      rel="stylesheet"
-    />
-    <!-- Bootstrap Icons -->
-    <link
-      rel="stylesheet"
-      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
-    />
-    <link rel="stylesheet" href="/src/styles/main.css" />
-  </head>
-  <body>
-    <header class="app-header">
-      <div class="header-inner">
-        <div class="logo">
-          <i class="bi bi-activity"></i>
-          <span>SwingAI</span>
-        </div>
-        <nav class="header-nav">
-          <a href="https://github.com/Eric-Wong97/golf-swing-analyzer" target="_blank" rel="noopener" class="nav-link">
-            <i class="bi bi-github"></i> GitHub
-          </a>
-        </nav>
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description"
+    content="Golf Swing Analyzer — client-side AI posture analysis using Google MediaPipe. 100% private: all processing runs in your browser." />
+  <title>Golf Swing Analyzer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap"
+    rel="stylesheet" />
+  <!-- Bootstrap Icons -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+  <link rel="stylesheet" href="/src/styles/main.css" />
+</head>
+
+<body>
+  <header class="app-header">
+    <div class="header-inner">
+      <div class="logo">
+        <i class="bi bi-activity"></i>
       </div>
-    </header>
+      <nav class="header-nav">
+        <a href="https://github.com/Eric-Wong97/golf-swing-analyzer" target="_blank" rel="noopener" class="nav-link">
+          <i class="bi bi-github"></i> GitHub
+        </a>
+      </nav>
+    </div>
+  </header>
 
-    <main class="app-main">
-      <!-- Hero / Upload -->
-      <section class="hero fade-in">
-        <h1 class="hero-title">Golf Swing Analyzer</h1>
-        <p class="hero-sub">
-          Upload a video of your golf swing for instant AI-powered posture analysis.<br />
-          <strong>100% Private</strong> — all processing happens locally in your browser.
-        </p>
-        <div class="upload-zone" id="upload-zone">
-          <i class="bi bi-cloud-upload upload-icon"></i>
-          <p class="upload-label">Drop a video here or <span class="upload-link">browse files</span></p>
-          <p class="upload-hint">MP4, MOV, WebM · Any resolution</p>
-          <input type="file" id="video-upload" accept="video/*" />
-        </div>
-        <div id="file-badge" class="file-badge hidden">
-          <i class="bi bi-file-earmark-play"></i>
-          <span id="file-name-text">No file chosen</span>
-        </div>
-      </section>
+  <main class="app-main">
+    <!-- Hero / Upload -->
+    <section class="hero fade-in">
+      <h1 class="hero-title">Golf Swing Analyzer</h1>
+      <p class="hero-sub">
+        Upload a video of your golf swing for instant AI-powered posture analysis.<br />
+        <strong>100% Private</strong> — all processing happens locally in your browser.
+      </p>
+      <div class="upload-zone" id="upload-zone">
+        <i class="bi bi-cloud-upload upload-icon"></i>
+        <p class="upload-label">Drop a video here or <span class="upload-link">browse files</span></p>
+        <p class="upload-hint">MP4, MOV, WebM · Any resolution</p>
+      </div>
+      <input type="file" id="video-upload" class="sr-only" accept="video/*" />
+      <div id="file-badge" class="file-badge hidden">
+        <i class="bi bi-file-earmark-play"></i>
+        <span id="file-name-text">No file chosen</span>
+      </div>
+    </section>
 
-      <!-- Loading -->
-      <div id="loading-indicator" class="loading-bar hidden">
-        <div class="loading-inner">
-          <div class="spinner"></div>
-          <span>Initializing AI Model…</span>
+    <!-- Loading -->
+    <div id="loading-indicator" class="loading-bar hidden">
+      <div class="loading-inner">
+        <div class="spinner"></div>
+        <span>Initializing AI Model…</span>
+      </div>
+    </div>
+
+    <!-- Workspace -->
+    <section class="workspace hidden" id="workspace">
+      <!-- Video player + canvases -->
+      <div class="player-panel">
+        <div class="video-wrapper" id="video-wrapper">
+          <video id="video-element" controls playsinline></video>
+          <canvas id="output-canvas"></canvas>
+          <canvas id="line-canvas"></canvas>
+
+          <!-- Drawing toolbar (left side) -->
+          <div class="drawing-toolbar" id="drawing-toolbar">
+            <button id="toggle-drawing" class="tool-btn" title="Toggle drawing mode">
+              <i class="bi bi-pencil-fill"></i>
+            </button>
+            <div class="tool-divider"></div>
+            <button id="undo-drawing" class="tool-btn" title="Undo" disabled>
+              <i class="bi bi-arrow-counterclockwise"></i>
+            </button>
+            <button id="redo-drawing" class="tool-btn" title="Redo" disabled>
+              <i class="bi bi-arrow-clockwise"></i>
+            </button>
+            <button id="clear-drawing" class="tool-btn" title="Clear all lines">
+              <i class="bi bi-trash3"></i>
+            </button>
+            <div class="tool-divider"></div>
+            <label class="color-swatch-label" title="Line colour">
+              <input type="color" id="line-color" value="#facc15" />
+              <span class="color-swatch-ring"></span>
+            </label>
+          </div>
+
+          <!-- Mode indicator -->
+          <div class="mode-badge hidden" id="mode-badge">
+            <i class="bi bi-pencil-fill"></i> Draw Mode
+          </div>
         </div>
       </div>
 
-      <!-- Workspace -->
-      <section class="workspace hidden" id="workspace">
-        <!-- Video player + canvases -->
-        <div class="player-panel">
-          <div class="video-wrapper" id="video-wrapper">
-            <video id="video-element" controls playsinline></video>
-            <canvas id="output-canvas"></canvas>
-            <canvas id="line-canvas"></canvas>
-
-            <!-- Drawing toolbar (left side) -->
-            <div class="drawing-toolbar" id="drawing-toolbar">
-              <button id="toggle-drawing" class="tool-btn" title="Toggle drawing mode">
-                <i class="bi bi-pencil-fill"></i>
-              </button>
-              <div class="tool-divider"></div>
-              <button id="undo-drawing" class="tool-btn" title="Undo" disabled>
-                <i class="bi bi-arrow-counterclockwise"></i>
-              </button>
-              <button id="redo-drawing" class="tool-btn" title="Redo" disabled>
-                <i class="bi bi-arrow-clockwise"></i>
-              </button>
-              <button id="clear-drawing" class="tool-btn" title="Clear all lines">
-                <i class="bi bi-trash3"></i>
-              </button>
-              <div class="tool-divider"></div>
-              <label class="color-swatch-label" title="Line colour">
-                <input type="color" id="line-color" value="#facc15" />
-                <span class="color-swatch-ring"></span>
-              </label>
-            </div>
-
-            <!-- Mode indicator -->
-            <div class="mode-badge hidden" id="mode-badge">
-              <i class="bi bi-pencil-fill"></i> Draw Mode
-            </div>
+      <!-- Dashboard (Replaced by 3D Puppet) -->
+      <div class="dashboard-panel">
+        <h2 class="panel-title">3D Swing Puppet</h2>
+        <div id="puppet-container" class="puppet-viewport">
+          <!-- Three.js canvas will be injected here -->
+          <div class="puppet-placeholder">
+            <i class="bi bi-person-bounding-box"></i>
+            <span>3D Viewport</span>
           </div>
         </div>
-
-        <!-- Dashboard -->
-        <div class="dashboard-panel">
-          <h2 class="panel-title">Live Analysis</h2>
-
-          <div class="metric-card" id="card-arm">
-            <div class="metric-header">
-              <span class="metric-icon arm-icon"><i class="bi bi-person-arms-up"></i></span>
-              <span class="metric-label">Lead Arm</span>
-            </div>
-            <div class="metric-value" id="arm-angle">--°</div>
-            <div class="metric-bar-track">
-              <div class="metric-bar" id="arm-bar"></div>
-            </div>
-            <div class="metric-rec" id="arm-rec">Waiting for video…</div>
-          </div>
-
-          <div class="metric-card" id="card-knee">
-            <div class="metric-header">
-              <span class="metric-icon knee-icon"><i class="bi bi-person-walking"></i></span>
-              <span class="metric-label">Knee Posture</span>
-            </div>
-            <div class="metric-value" id="knee-angle">--°</div>
-            <div class="metric-bar-track">
-              <div class="metric-bar" id="knee-bar"></div>
-            </div>
-            <div class="metric-rec" id="knee-rec">Waiting for video…</div>
-          </div>
+        <div class="puppet-controls">
+          <p class="puppet-hint">Move mouse to rotate · Scroll to zoom</p>
         </div>
-      </section>
+      </div>
+    </section>
+  </main>
 
-      <!-- Performance Report -->
-      <section class="report hidden" id="performance-report">
-        <div class="report-header">
-          <h2><i class="bi bi-clipboard-data-fill"></i> Performance Report</h2>
-          <button id="export-report" class="export-btn">
-            <i class="bi bi-download"></i> Export
-          </button>
-        </div>
+  <footer class="app-footer">
+    <p>Built with <a href="https://ai.google.dev/edge/mediapipe" target="_blank" rel="noopener">MediaPipe</a> · Open
+      source on <a href="https://github.com/Eric-Wong97/golf-swing-analyzer" target="_blank" rel="noopener">GitHub</a>
+    </p>
+  </footer>
 
-        <div class="report-body">
-          <!-- Summary -->
-          <div class="report-section">
-            <h3 class="section-title">Session Summary</h3>
-            <div class="summary-grid">
-              <div class="summary-card">
-                <span class="s-label">Duration</span>
-                <span class="s-value" id="report-duration">--</span>
-              </div>
-              <div class="summary-card">
-                <span class="s-label">Frames Analyzed</span>
-                <span class="s-value" id="report-frames">--</span>
-              </div>
-              <div class="summary-card">
-                <span class="s-label">Detection Rate</span>
-                <span class="s-value" id="report-detection">--</span>
-              </div>
-            </div>
-          </div>
+  <script type="module" src="/src/main.js"></script>
+</body>
 
-          <!-- Lead Arm -->
-          <div class="report-section">
-            <h3 class="section-title">Lead Arm Analysis</h3>
-            <div class="metrics-grid">
-              <div class="mcard"><span class="m-label">Current</span><span class="m-value" id="report-arm-current">--°</span></div>
-              <div class="mcard"><span class="m-label">Average</span><span class="m-value" id="report-arm-avg">--°</span></div>
-              <div class="mcard"><span class="m-label">Min</span><span class="m-value" id="report-arm-min">--°</span></div>
-              <div class="mcard"><span class="m-label">Max</span><span class="m-value" id="report-arm-max">--°</span></div>
-              <div class="mcard full"><span class="m-label">Threshold</span><span class="m-value">≥ 160° (Good)</span></div>
-              <div class="mcard full"><span class="m-label">Assessment</span><span class="m-value" id="report-arm-assessment">--</span></div>
-            </div>
-          </div>
-
-          <!-- Knee -->
-          <div class="report-section">
-            <h3 class="section-title">Knee Posture Analysis</h3>
-            <div class="metrics-grid">
-              <div class="mcard"><span class="m-label">Current</span><span class="m-value" id="report-knee-current">--°</span></div>
-              <div class="mcard"><span class="m-label">Average</span><span class="m-value" id="report-knee-avg">--°</span></div>
-              <div class="mcard"><span class="m-label">Min</span><span class="m-value" id="report-knee-min">--°</span></div>
-              <div class="mcard"><span class="m-label">Max</span><span class="m-value" id="report-knee-max">--°</span></div>
-              <div class="mcard full"><span class="m-label">Optimal Range</span><span class="m-value">130° – 170°</span></div>
-              <div class="mcard full"><span class="m-label">Assessment</span><span class="m-value" id="report-knee-assessment">--</span></div>
-            </div>
-          </div>
-
-          <!-- Recommendations -->
-          <div class="report-section last">
-            <h3 class="section-title">Key Recommendations</h3>
-            <ul class="rec-list" id="recommendations-list">
-              <li>Upload a video to generate recommendations</li>
-            </ul>
-          </div>
-        </div>
-      </section>
-    </main>
-
-    <footer class="app-footer">
-      <p>Built with <a href="https://ai.google.dev/edge/mediapipe" target="_blank" rel="noopener">MediaPipe</a> · Open source on <a href="https://github.com/Eric-Wong97/golf-swing-analyzer" target="_blank" rel="noopener">GitHub</a></p>
-    </footer>
-
-    <script type="module" src="/src/main.js"></script>
-  </body>
 </html>

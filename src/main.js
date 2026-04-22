@@ -2,10 +2,16 @@
  * main.js — App entry point and render loop orchestrator.
  */
 
-import { calculateAngle } from './geometry.js';
-import { initPoseLandmarker, detectPose, isReady, PoseLandmarker, DrawingUtils } from './mediapipe.js';
+console.log('main.js: Script loading started');
+
+import { initPoseLandmarker, detectPose, isReady, getConstants } from './mediapipe.js';
 import { initDrawing, resetDrawing } from './drawing.js';
-import { resetPerformanceData, recordFrame, updateReport, exportReport } from './performance.js';
+
+// Lazy load puppet.js to keep initial load light
+let updatePuppet = null;
+let initPuppet = null;
+
+console.log('main.js: Essential modules imported');
 
 // ─── DOM References ───────────────────────────────────────────────────────────
 const uploadZone      = document.getElementById('upload-zone');
@@ -20,17 +26,11 @@ const outputCanvas    = document.getElementById('output-canvas');
 const lineCanvas      = document.getElementById('line-canvas');
 const outputCtx       = outputCanvas.getContext('2d');
 
-const armAngleEl      = document.getElementById('arm-angle');
-const armRecEl        = document.getElementById('arm-rec');
-const armBarEl        = document.getElementById('arm-bar');
-const kneeAngleEl     = document.getElementById('knee-angle');
-const kneeRecEl       = document.getElementById('knee-rec');
-const kneeBarEl       = document.getElementById('knee-bar');
-
-const exportBtn       = document.getElementById('export-report');
+const puppetContainer = document.getElementById('puppet-container');
 
 // ─── State ────────────────────────────────────────────────────────────────────
 let lastVideoTime = -1;
+let puppetInitialized = false;
 
 // ─── Drawing init ─────────────────────────────────────────────────────────────
 initDrawing({
@@ -44,7 +44,11 @@ initDrawing({
 });
 
 // ─── Upload zone ──────────────────────────────────────────────────────────────
-uploadZone.addEventListener('click', () => videoUploadEl.click());
+uploadZone.addEventListener('click', () => {
+  console.log('main.js: Upload zone clicked');
+  videoUploadEl.click();
+});
+
 uploadZone.addEventListener('dragover', (e) => {
   e.preventDefault();
   uploadZone.classList.add('dragover');
@@ -54,7 +58,9 @@ uploadZone.addEventListener('drop', (e) => {
   e.preventDefault();
   uploadZone.classList.remove('dragover');
   const file = e.dataTransfer.files[0];
-  if (file && file.type.startsWith('video/')) loadVideo(file);
+  if (file && file.type.startsWith('video/')) {
+    loadVideo(file);
+  }
 });
 
 videoUploadEl.addEventListener('change', (e) => {
@@ -69,15 +75,30 @@ async function loadVideo(file) {
   const url = URL.createObjectURL(file);
   videoEl.src = url;
 
-  resetPerformanceData();
   resetDrawing();
-  document.getElementById('performance-report').classList.add('hidden');
   lastVideoTime = -1;
 
   workspaceEl.classList.remove('hidden');
   workspaceEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
+  // Start heavy initialization only after upload
+  if (!puppetInitialized) {
+    console.log('main.js: Lazy loading puppet.js');
+    try {
+      const puppetModule = await import('./puppet.js');
+      initPuppet = puppetModule.initPuppet;
+      updatePuppet = puppetModule.updatePuppet;
+      
+      initPuppet(puppetContainer);
+      puppetInitialized = true;
+      console.log('main.js: Puppet initialized');
+    } catch (err) {
+      console.error('main.js: Failed to lazy load puppet.js', err);
+    }
+  }
+
   if (!isReady()) {
+    console.log('main.js: Starting lazy pose landmarker init');
     await initPoseLandmarker((loading) => {
       loadingEl.classList.toggle('hidden', !loading);
     });
@@ -92,28 +113,6 @@ videoEl.addEventListener('loadedmetadata', () => {
   lineCanvas.height   = videoEl.videoHeight;
 });
 
-// ─── Export ───────────────────────────────────────────────────────────────────
-exportBtn.addEventListener('click', () => exportReport(videoEl));
-
-// ─── Dashboard helpers ────────────────────────────────────────────────────────
-function setAngleDisplay(valueEl, recEl, barEl, angle, isGood, goodText, badText) {
-  valueEl.textContent = `${Math.round(angle)}°`;
-  recEl.textContent   = isGood ? goodText : badText;
-  recEl.className     = `metric-rec ${isGood ? 'rec-good' : 'rec-bad'}`;
-  const pct = Math.min(Math.max((angle / 180) * 100, 0), 100);
-  barEl.style.width = `${pct}%`;
-  barEl.className   = `metric-bar ${isGood ? 'bar-good' : 'bar-bad'}`;
-}
-
-function setNoDetection() {
-  [armAngleEl, kneeAngleEl].forEach((el) => (el.textContent = '--°'));
-  [armRecEl, kneeRecEl].forEach((el) => {
-    el.textContent = 'No person detected';
-    el.className = 'metric-rec';
-  });
-  [armBarEl, kneeBarEl].forEach((el) => (el.style.width = '0%'));
-}
-
 // ─── Render Loop ──────────────────────────────────────────────────────────────
 function renderLoop() {
   requestAnimationFrame(renderLoop);
@@ -124,14 +123,14 @@ function renderLoop() {
   lastVideoTime = videoEl.currentTime;
   const timestampMs = performance.now();
 
+  const { PoseLandmarker, DrawingUtils } = getConstants();
+
   detectPose(videoEl, timestampMs, (result) => {
     outputCtx.save();
     outputCtx.clearRect(0, 0, outputCanvas.width, outputCanvas.height);
 
-    if (result.landmarks?.length > 0) {
+    if (result.landmarks?.length > 0 && DrawingUtils && PoseLandmarker) {
       const landmarks = result.landmarks[0];
-
-      // Draw skeleton
       const du = new DrawingUtils(outputCtx);
       du.drawConnectors(landmarks, PoseLandmarker.POSE_CONNECTIONS, {
         color: 'rgba(0,255,120,0.85)',
@@ -142,55 +141,15 @@ function renderLoop() {
         lineWidth: 1,
         radius: 3,
       });
+    }
 
-      // Extract key landmarks
-      const lShoulder = landmarks[11];
-      const lElbow    = landmarks[13];
-      const lWrist    = landmarks[15];
-      const lHip      = landmarks[23];
-      const lKnee     = landmarks[25];
-      const lAnkle    = landmarks[27];
-
-      if (lShoulder && lElbow && lWrist && lHip && lKnee && lAnkle) {
-        const armAngle  = calculateAngle(lShoulder, lElbow, lWrist);
-        const kneeAngle = calculateAngle(lHip, lKnee, lAnkle);
-
-        const isArmGood  = armAngle >= 160;
-        const isKneeGood = kneeAngle >= 130 && kneeAngle <= 170;
-        let kneeText = 'Knee posture: GOOD';
-        if (kneeAngle > 170) kneeText = 'Add knee bend!';
-        else if (kneeAngle < 130) kneeText = 'Less knee bend!';
-
-        setAngleDisplay(armAngleEl, armRecEl, armBarEl, armAngle, isArmGood, 'Lead arm straight ✓', 'Keep lead arm straight!');
-        setAngleDisplay(kneeAngleEl, kneeRecEl, kneeBarEl, kneeAngle, isKneeGood, 'Knee posture: GOOD ✓', kneeText);
-
-        // Angle overlay on canvas
-        outputCtx.font         = `bold 22px 'JetBrains Mono', monospace`;
-        outputCtx.lineWidth    = 3;
-        outputCtx.strokeStyle  = 'rgba(0,0,0,0.7)';
-        outputCtx.fillStyle    = isArmGood ? '#00ff78' : '#ff3b6b';
-
-        const ex = lElbow.x * outputCanvas.width;
-        const ey = lElbow.y * outputCanvas.height;
-        outputCtx.strokeText(`${Math.round(armAngle)}°`, ex + 14, ey - 4);
-        outputCtx.fillText(`${Math.round(armAngle)}°`, ex + 14, ey - 4);
-
-        outputCtx.fillStyle = isKneeGood ? '#00ff78' : '#ff3b6b';
-        const kx = lKnee.x * outputCanvas.width;
-        const ky = lKnee.y * outputCanvas.height;
-        outputCtx.strokeText(`${Math.round(kneeAngle)}°`, kx + 14, ky - 4);
-        outputCtx.fillText(`${Math.round(kneeAngle)}°`, kx + 14, ky - 4);
-
-        recordFrame({ armAngle, kneeAngle, detected: true });
-        updateReport(videoEl);
-      }
-    } else {
-      setNoDetection();
-      recordFrame({ armAngle: 0, kneeAngle: 0, detected: false });
+    if (result.worldLandmarks?.length > 0 && updatePuppet) {
+      updatePuppet(result.worldLandmarks[0]);
     }
 
     outputCtx.restore();
   });
 }
 
+console.log('main.js: Initial execution completed');
 requestAnimationFrame(renderLoop);
