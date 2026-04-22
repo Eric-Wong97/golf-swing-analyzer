@@ -1,75 +1,52 @@
 # Golf Swing Analyzer
 
-A Python-based minimum viable product (MVP) tool that uses computer vision to analyze a golf swing from prerecorded videos. This tool leverages Google's MediaPipe Pose Landmarker to extract real-time joint positions and calculate critical geometric angles to provide immediate posture recommendations.
+A client-side interactive web application that uses computer vision to analyze a golf swing from prerecorded videos. This tool leverages Google's MediaPipe Pose Landmarker to extract real-time joint positions and calculate critical geometric angles to provide immediate posture recommendations.
 
 ## Features
-- **Video Processing**: Parse prerecorded `.mp4` video files to analyze your swing in any setting without needing a live webcam.
+- **Browser-Based Video Processing**: Analyze your `.mp4`, `.mov`, or `.webm` files entirely locally in your browser. No server uploads required, guaranteeing 100% privacy.
 - **Pose Estimation**: Extracts body landmarks using the lightweight MediaPipe Tasks Vision API for extremely fast and accurate tracking.
-- **Angle Calculation**: Evaluates core golf mechanics:
+- **Live Analysis**: Evaluates core golf mechanics:
   - **Lead Arm Extension**: Calculates the angle between your lead shoulder, elbow, and wrist.
   - **Athletic Posture (Knee Flexion)**: Calculates the angle between your lead hip, knee, and ankle.
-- **Live UI Overlay**: Displays an on-screen heads-up display showing your current angles alongside personalized, real-time feedback (e.g., "Keep lead arm straight", "Add knee bend").
-- **Keyframe Extraction**: Includes full playback controls. Pause the video at the exact moment of impact and extract an annotated PNG screenshot!
-
-## Sample Analysis
-Here are some sample pose estimation frames extracted from the analyzer at different stages of a golf swing (address, backswing, and impact):
-
-|            Address            |           Backswing           |            Impact             |
-| :---------------------------: | :---------------------------: | :---------------------------: |
-| ![Keyframe 1](keyframe_1.png) | ![Keyframe 2](keyframe_2.png) | ![Keyframe 3](keyframe_3.png) |
-
-## Limitations
-- **Right-Handed Bias**: The current logic calculates angles based on the left shoulder, elbow, and knee. This makes it a perfect lead-side analyzer for right-handed golfers, but it currently tracks the trailing side for left-handed golfers.
-- **Body Tracking Only**: Google's MediaPipe is highly optimized for tracking the human body. As a result, this script does not currently track the golf club shaft, the clubface angle, or the golf ball itself.
+- **Drawing Tools**: Draw lines and annotations directly on the video while paused to analyze angles and planes.
+- **Performance Report**: Get a summary of your swing metrics including minimum/maximum angles and automated feedback.
 
 ## Prerequisites
-- Python 3.10+
-- Visual Studio build tools (required for OpenCV on some Windows setups)
+- Node.js (v18+)
+- npm or yarn
 
 ## Installation
 
-1. **Clone the repository** (or download the files):
+1. **Clone the repository**:
    ```bash
-   git clone https://github.com/YourUsername/golf-swing-analyzer.git
+   git clone https://github.com/Eric-Wong97/golf-swing-analyzer.git
    cd golf-swing-analyzer
    ```
 
-2. **Create and activate a virtual environment**:
+2. **Install dependencies**:
    ```bash
-   python -m venv venv
-   # On Windows:
-   venv\Scripts\activate
+   npm install
    ```
 
-3. **Install dependencies**:
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-4. **Model Setup**:
-   The script requires the lightweight pose landmarker model. It should already be included as `pose_landmarker_lite.task` in the root directory.
+3. **Model Setup**:
+   The web app uses MediaPipe's Task Vision API. The lightweight pose landmarker model (`pose_landmarker_lite.task`) is already included in the root directory and will be served locally.
 
 ## Usage
 
-Place the video file you want to analyze into the repository directory, then run the analyzer via the command line:
+Start the local Vite development server:
 
 ```bash
-python analyze_swing.py YOUR_VIDEO_NAME.mp4
+npm run dev
 ```
+
+Then open your browser to the local URL provided (usually `http://localhost:5173`).
 
 ### Controls
-Once the video player window opens, you can control the playback using your keyboard:
-- `SPACEBAR`: Play or pause the video. Fast-paced swings are best analyzed when paused!
-- `,` (Comma): While paused, step **backward** exactly one frame.
-- `.` (Period): While paused, step **forward** exactly one frame.
-- `s`: Save an annotated screenshot (`.png`) of the currently displayed frame to your folder.
-- `q`: Quit the program early.
+Once the video player is open:
+- Use the built-in video controls to play, pause, or seek.
+- While paused, you can use the Drawing Mode (pencil icon) to annotate the frame.
+- Click "Export" in the Performance Report section to download a summary.
 
-## Testing
-
-This repository includes unit tests built with `pytest` to guarantee the geometric mathematical functions are accurate.
-
-To run the tests:
-```bash
-pytest test_analyze_swing.py
-```
+## Limitations
+- **Right-Handed Bias**: The current logic calculates angles based on the left shoulder, elbow, and knee. This makes it a perfect lead-side analyzer for right-handed golfers, but it currently tracks the trailing side for left-handed golfers.
+- **Body Tracking Only**: Google's MediaPipe is highly optimized for tracking the human body. As a result, this app does not currently track the golf club shaft, the clubface angle, or the golf ball itself.

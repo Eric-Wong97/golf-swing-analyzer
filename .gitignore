@@ -1,24 +1,39 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
 # Python
 __pycache__/
 *.py[cod]
 *$py.class
-
-# Pytest
+venv/
+.venv/
+env/
+.env/
 .pytest_cache/
 
-# Environments
-venv/
-env/
-.env
-
-# Models
+# Binary data and media
 *.task
-
-# Video files
 *.mp4
-*.mov
-*.avi
-
-# Image files (Ignore by default, but allow keyframes for README)
 *.png
-!keyframe_*.png
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
