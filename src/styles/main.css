@@ -256,6 +256,21 @@ video {
   z-index: 1;
 }
 
+#ref-video-element {
+  position: absolute;
+  bottom: 1rem;
+  right: 1rem;
+  width: 25%;
+  height: auto;
+  aspect-ratio: 16 / 9;
+  border-radius: var(--radius-sm);
+  border: 2px solid #3b82f6;
+  z-index: 10;
+  background: black;
+  box-shadow: var(--shadow);
+  pointer-events: none; /* Let clicks pass through to main video controls if needed, or allow it */
+}
+
 canvas {
   position: absolute;
   inset: 0;

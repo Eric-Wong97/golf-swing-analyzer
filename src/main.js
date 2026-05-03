@@ -4,11 +4,12 @@
 
 console.log('main.js: Script loading started');
 
-import { initPoseLandmarker, detectPose, isReady, getConstants } from './mediapipe.js';
+import { initPoseLandmarker, detectPose, initRefPoseLandmarker, detectRefPose, isReady, getConstants } from './mediapipe.js';
 import { initDrawing, resetDrawing } from './drawing.js';
 
 // Lazy load puppet.js to keep initial load light
 let updatePuppet = null;
+let updateReferencePuppet = null;
 let initPuppet = null;
 
 console.log('main.js: Essential modules imported');
@@ -18,10 +19,16 @@ const uploadZone      = document.getElementById('upload-zone');
 const videoUploadEl   = document.getElementById('video-upload');
 const fileBadge       = document.getElementById('file-badge');
 const fileNameText    = document.getElementById('file-name-text');
+
+const refVideoUploadEl = document.getElementById('ref-video-upload');
+const refFileBadge     = document.getElementById('ref-file-badge');
+const refFileNameText  = document.getElementById('ref-file-name-text');
+
 const loadingEl       = document.getElementById('loading-indicator');
 const workspaceEl     = document.getElementById('workspace');
 
 const videoEl         = document.getElementById('video-element');
+const refVideoEl      = document.getElementById('ref-video-element');
 const outputCanvas    = document.getElementById('output-canvas');
 const lineCanvas      = document.getElementById('line-canvas');
 const outputCtx       = outputCanvas.getContext('2d');
@@ -68,6 +75,22 @@ videoUploadEl.addEventListener('change', (e) => {
   if (file) loadVideo(file);
 });
 
+refVideoUploadEl.addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (file) {
+    refFileNameText.textContent = file.name;
+    refFileBadge.classList.remove('hidden');
+    
+    const url = URL.createObjectURL(file);
+    refVideoEl.src = url;
+    refVideoEl.classList.remove('hidden');
+    
+    // Initialize secondary AI model
+    await initRefPoseLandmarker();
+    refVideoEl.play();
+  }
+});
+
 async function loadVideo(file) {
   fileNameText.textContent = file.name;
   fileBadge.classList.remove('hidden');
@@ -88,6 +111,7 @@ async function loadVideo(file) {
       const puppetModule = await import('./puppet.js');
       initPuppet = puppetModule.initPuppet;
       updatePuppet = puppetModule.updatePuppet;
+      updateReferencePuppet = puppetModule.updateReferencePuppet;
       
       initPuppet(puppetContainer);
       puppetInitialized = true;
@@ -149,6 +173,14 @@ function renderLoop() {
 
     outputCtx.restore();
   });
+
+  if (refVideoEl && refVideoEl.readyState >= 2 && refVideoEl.videoWidth > 0 && !refVideoEl.paused) {
+    detectRefPose(refVideoEl, performance.now(), (result) => {
+      if (result.worldLandmarks?.length > 0 && updateReferencePuppet) {
+        updateReferencePuppet(result.worldLandmarks[0]);
+      }
+    });
+  }
 }
 
 console.log('main.js: Initial execution completed');

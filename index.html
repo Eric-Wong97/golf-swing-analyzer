@@ -49,6 +49,17 @@
         <i class="bi bi-file-earmark-play"></i>
         <span id="file-name-text">No file chosen</span>
       </div>
+
+      <div class="ref-upload-container fade-in" style="margin-top: 1.5rem;">
+        <label for="ref-video-upload" class="upload-link" style="cursor: pointer; display: inline-flex; align-items: center; gap: 0.5rem; background: var(--surface-2); padding: 0.5rem 1rem; border-radius: var(--radius-md); border: 1px solid var(--border);">
+          <i class="bi bi-camera-video"></i> Add Reference Video (Optional)
+        </label>
+        <input type="file" id="ref-video-upload" class="sr-only" accept="video/*" />
+        <div id="ref-file-badge" class="file-badge hidden" style="justify-content: center; margin-top: 0.5rem; color: #3b82f6;">
+          <i class="bi bi-file-earmark-play"></i>
+          <span id="ref-file-name-text">No reference chosen</span>
+        </div>
+      </div>
     </section>
 
     <!-- Loading -->
@@ -65,6 +76,7 @@
       <div class="player-panel">
         <div class="video-wrapper" id="video-wrapper">
           <video id="video-element" controls playsinline></video>
+          <video id="ref-video-element" class="hidden" playsinline loop muted></video>
           <canvas id="output-canvas"></canvas>
           <canvas id="line-canvas"></canvas>
 

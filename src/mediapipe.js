@@ -4,6 +4,7 @@
  */
 
 let poseLandmarker = null;
+let refPoseLandmarker = null;
 let isLoading = false;
 let DrawingUtils = null;
 let PoseLandmarker = null;
@@ -49,6 +50,31 @@ export async function initPoseLandmarker(onLoadingChange) {
 export function detectPose(video, timestampMs, callback) {
   if (!poseLandmarker) return;
   poseLandmarker.detectForVideo(video, timestampMs, callback);
+}
+
+export async function initRefPoseLandmarker() {
+  if (refPoseLandmarker || !PoseLandmarker) return;
+  try {
+    const visionModule = await import('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.0');
+    const FilesetResolver = visionModule.FilesetResolver;
+    const vision = await FilesetResolver.forVisionTasks(WASM_URL);
+    refPoseLandmarker = await PoseLandmarker.createFromOptions(vision, {
+      baseOptions: {
+        modelAssetPath: MODEL_URL,
+        delegate: 'GPU',
+      },
+      runningMode: 'VIDEO',
+      numPoses: 1,
+    });
+    console.log('mediapipe.js: Reference MediaPipe initialized successfully');
+  } catch (err) {
+    console.error('mediapipe.js: Failed to initialize Reference MediaPipe', err);
+  }
+}
+
+export function detectRefPose(video, timestampMs, callback) {
+  if (!refPoseLandmarker) return;
+  refPoseLandmarker.detectForVideo(video, timestampMs, callback);
 }
 
 export function isReady() {
