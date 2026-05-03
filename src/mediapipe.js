@@ -47,9 +47,9 @@ export async function initPoseLandmarker(onLoadingChange) {
   }
 }
 
-export function detectPose(video, timestampMs, callback) {
-  if (!poseLandmarker) return;
-  poseLandmarker.detectForVideo(video, timestampMs, callback);
+export function detectPose(video, timestampMs) {
+  if (!poseLandmarker) return null;
+  return poseLandmarker.detectForVideo(video, timestampMs);
 }
 
 export async function initRefPoseLandmarker() {
@@ -72,9 +72,9 @@ export async function initRefPoseLandmarker() {
   }
 }
 
-export function detectRefPose(video, timestampMs, callback) {
-  if (!refPoseLandmarker) return;
-  refPoseLandmarker.detectForVideo(video, timestampMs, callback);
+export function detectRefPose(video, timestampMs) {
+  if (!refPoseLandmarker) return null;
+  return refPoseLandmarker.detectForVideo(video, timestampMs);
 }
 
 export function isReady() {

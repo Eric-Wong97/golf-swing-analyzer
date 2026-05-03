@@ -241,14 +241,9 @@ function updateBoneMesh(bone, start, end) {
  * Root is the midpoint of the hips (23, 24).
  */
 function applyAnatomicalConstraints(landmarks, targets) {
-  const root = new THREE.Vector3(
-    (landmarks[23].x + landmarks[24].x) * 0.5,
-    (landmarks[23].y + landmarks[24].y) * 0.5,
-    (landmarks[23].z + landmarks[24].z) * 0.5
-  );
+  if (!landmarks[23] || !landmarks[24]) return;
 
-  // We'll calculate the lowest Y to ground it later, 
-  // but first we need to build the skeleton relative to root.
+  // Build skeleton relative to hips
   const constrained = new Array(33).fill(null);
   
   // Initialize hips
@@ -261,7 +256,12 @@ function applyAnatomicalConstraints(landmarks, targets) {
 
   // Find connections for the queue
   const connections = {};
-  POSE_CONNECTIONS.forEach(([p, c]) => {
+  const skeletonConnections = [
+    ...POSE_CONNECTIONS,
+    [11, 0], [12, 0] // Connect head (0) to shoulders for tracking
+  ];
+
+  skeletonConnections.forEach(([p, c]) => {
     if (!connections[p]) connections[p] = [];
     if (!connections[c]) connections[c] = [];
     connections[p].push(c);
@@ -273,30 +273,36 @@ function applyAnatomicalConstraints(landmarks, targets) {
     const children = connections[pIdx] || [];
     
     children.forEach(cIdx => {
-      if (visited.has(cIdx)) return;
+      if (visited.has(cIdx) || !landmarks[cIdx]) return;
       
       const parentPos = constrained[pIdx];
-      const rawDir = new THREE.Vector3(
+      const rawDiff = new THREE.Vector3(
         landmarks[cIdx].x - landmarks[pIdx].x,
         landmarks[cIdx].y - landmarks[pIdx].y,
         landmarks[cIdx].z - landmarks[pIdx].z
-      ).normalize();
+      );
 
-      // Find bone length
-      const def = BONE_DEFS.find(d => (d.parent === pIdx && d.child === cIdx) || (d.parent === cIdx && d.child === pIdx));
-      let length = def ? def.len : parentPos.distanceTo(new THREE.Vector3(landmarks[cIdx].x, landmarks[cIdx].y, landmarks[cIdx].z));
+      // Avoid divide by zero/NaN if landmarks overlap
+      if (rawDiff.lengthSq() < 0.00001) {
+        constrained[cIdx] = parentPos.clone();
+      } else {
+        // Find bone length
+        const def = BONE_DEFS.find(d => (d.parent === pIdx && d.child === cIdx) || (d.parent === cIdx && d.child === pIdx));
+        let length = def ? def.len : parentPos.distanceTo(new THREE.Vector3(landmarks[cIdx].x, landmarks[cIdx].y, landmarks[cIdx].z));
 
-      // Extra Z-stabilization: dampening deep Z movements
-      const zDiff = landmarks[cIdx].z - landmarks[pIdx].z;
-      const dampedZ = zDiff * 0.7; // Dampen Z depth by 30% to reduce flickering contortions
+        // Extra Z-stabilization: dampening deep Z movements
+        const zDiff = landmarks[cIdx].z - landmarks[pIdx].z;
+        const dampedZ = zDiff * 0.7; 
+        
+        const stabilizedDir = new THREE.Vector3(
+          landmarks[cIdx].x - landmarks[pIdx].x,
+          landmarks[cIdx].y - landmarks[pIdx].y,
+          dampedZ
+        ).normalize();
+
+        constrained[cIdx] = parentPos.clone().add(stabilizedDir.multiplyScalar(length));
+      }
       
-      const stabilizedDir = new THREE.Vector3(
-        landmarks[cIdx].x - landmarks[pIdx].x,
-        landmarks[cIdx].y - landmarks[pIdx].y,
-        dampedZ
-      ).normalize();
-
-      constrained[cIdx] = parentPos.clone().add(stabilizedDir.multiplyScalar(length));
       visited.add(cIdx);
       queue.push(cIdx);
     });
@@ -310,6 +316,9 @@ function applyAnatomicalConstraints(landmarks, targets) {
       if (pos.y > lowestY) lowestY = pos.y;
     }
   });
+
+  // If no feet detected, default grounding to hip level or similar
+  if (lowestY === -Infinity) lowestY = 0;
 
   // Apply to targets with grounding and scale
   constrained.forEach((pos, i) => {

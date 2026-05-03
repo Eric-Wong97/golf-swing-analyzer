@@ -138,48 +138,69 @@ videoEl.addEventListener('loadedmetadata', () => {
 });
 
 // ─── Render Loop ──────────────────────────────────────────────────────────────
+let isProcessing = false;
+let isRefProcessing = false;
+
 function renderLoop() {
   requestAnimationFrame(renderLoop);
 
   if (!isReady() || videoEl.readyState < 2 || videoEl.videoWidth === 0) return;
-  if (lastVideoTime === videoEl.currentTime) return;
+  
+  // Skip if already processing a frame or if the video timestamp hasn't changed
+  if (isProcessing || lastVideoTime === videoEl.currentTime) return;
 
-  lastVideoTime = videoEl.currentTime;
   const timestampMs = performance.now();
-
   const { PoseLandmarker, DrawingUtils } = getConstants();
 
-  detectPose(videoEl, timestampMs, (result) => {
-    outputCtx.save();
-    outputCtx.clearRect(0, 0, outputCanvas.width, outputCanvas.height);
+  // Primary Pose Detection
+  isProcessing = true;
+  try {
+    const result = detectPose(videoEl, timestampMs);
+    lastVideoTime = videoEl.currentTime;
 
-    if (result.landmarks?.length > 0 && DrawingUtils && PoseLandmarker) {
-      const landmarks = result.landmarks[0];
-      const du = new DrawingUtils(outputCtx);
-      du.drawConnectors(landmarks, PoseLandmarker.POSE_CONNECTIONS, {
-        color: 'rgba(0,255,120,0.85)',
-        lineWidth: 2,
-      });
-      du.drawLandmarks(landmarks, {
-        color: '#ff3b6b',
-        lineWidth: 1,
-        radius: 3,
-      });
-    }
+    if (result) {
+      outputCtx.save();
+      outputCtx.clearRect(0, 0, outputCanvas.width, outputCanvas.height);
 
-    if (result.worldLandmarks?.length > 0 && updatePuppet) {
-      updatePuppet(result.worldLandmarks[0]);
-    }
-
-    outputCtx.restore();
-  });
-
-  if (refVideoEl && refVideoEl.readyState >= 2 && refVideoEl.videoWidth > 0 && !refVideoEl.paused) {
-    detectRefPose(refVideoEl, performance.now(), (result) => {
-      if (result.worldLandmarks?.length > 0 && updateReferencePuppet) {
-        updateReferencePuppet(result.worldLandmarks[0]);
+      if (result.landmarks?.length > 0 && DrawingUtils && PoseLandmarker) {
+        const landmarks = result.landmarks[0];
+        const du = new DrawingUtils(outputCtx);
+        du.drawConnectors(landmarks, PoseLandmarker.POSE_CONNECTIONS, {
+          color: 'rgba(0,255,120,0.85)',
+          lineWidth: 2,
+        });
+        du.drawLandmarks(landmarks, {
+          color: '#ff3b6b',
+          lineWidth: 1,
+          radius: 3,
+        });
       }
-    });
+
+      if (result.worldLandmarks?.length > 0 && updatePuppet) {
+        updatePuppet(result.worldLandmarks[0]);
+      }
+
+      outputCtx.restore();
+    }
+  } catch (err) {
+    console.error('Main detection error:', err);
+  } finally {
+    isProcessing = false;
+  }
+
+  // Reference Pose Detection (Only if playing and not busy)
+  if (refVideoEl && refVideoEl.readyState >= 2 && refVideoEl.videoWidth > 0 && !refVideoEl.paused && !isRefProcessing) {
+    isRefProcessing = true;
+    try {
+      const refResult = detectRefPose(refVideoEl, performance.now());
+      if (refResult && refResult.worldLandmarks?.length > 0 && updateReferencePuppet) {
+        updateReferencePuppet(refResult.worldLandmarks[0]);
+      }
+    } catch (err) {
+      console.error('Reference detection error:', err);
+    } finally {
+      isRefProcessing = false;
+    }
   }
 }
 
